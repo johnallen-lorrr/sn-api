@@ -17,7 +17,7 @@ let commandQueue = [];
 let commandLogs = [];
 let commandId = 1;
 
-const TIMEOUT = 30000;
+const TIMEOUT = 10000;
 
 function cleanOldData() {
     const now = Date.now();
