@@ -14,6 +14,22 @@ app.use((req, res, next) => {
 let onlinePlayers = [];
 let activeServers = {};
 
+const TIMEOUT = 30000; // 30 seconds
+
+function cleanOldData() {
+    const now = Date.now();
+
+    for (const jobId in activeServers) {
+        if (now - activeServers[jobId].last_ping > TIMEOUT) {
+            delete activeServers[jobId];
+        }
+    }
+
+    onlinePlayers = onlinePlayers.filter(player => {
+        return now - player.last_seen <= TIMEOUT;
+    });
+}
+
 app.get("/", (req, res) => {
     res.json({
         success: true,
@@ -23,6 +39,7 @@ app.get("/", (req, res) => {
 
 app.post("/heartbeat", (req, res) => {
     const data = req.body;
+    const now = Date.now();
 
     console.log("HEARTBEAT RECEIVED");
     console.log(data);
@@ -33,10 +50,20 @@ app.post("/heartbeat", (req, res) => {
         job_id: jobId,
         place_id: data.place_id || "unknown",
         player_count: data.player_count || 0,
-        last_ping: Date.now()
+        last_ping: now
     };
 
-    onlinePlayers = data.players || [];
+    onlinePlayers = (data.players || []).map(player => {
+        return {
+            user_id: player.user_id,
+            username: player.username,
+            display_name: player.display_name,
+            job_id: jobId,
+            last_seen: now
+        };
+    });
+
+    cleanOldData();
 
     res.json({
         success: true,
@@ -47,6 +74,8 @@ app.post("/heartbeat", (req, res) => {
 });
 
 app.get("/api/stats", (req, res) => {
+    cleanOldData();
+
     res.json({
         success: true,
         online_players: onlinePlayers.length,
@@ -57,6 +86,8 @@ app.get("/api/stats", (req, res) => {
 });
 
 app.get("/api/players", (req, res) => {
+    cleanOldData();
+
     res.json({
         success: true,
         players: onlinePlayers
@@ -64,6 +95,8 @@ app.get("/api/players", (req, res) => {
 });
 
 app.get("/api/servers", (req, res) => {
+    cleanOldData();
+
     res.json({
         success: true,
         servers: Object.values(activeServers)
