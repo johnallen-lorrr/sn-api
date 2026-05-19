@@ -1,6 +1,7 @@
 const express = require("express");
 
 const app = express();
+
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -17,7 +18,9 @@ let commandQueue = [];
 let commandLogs = [];
 let commandId = 1;
 
-const TIMEOUT = 10000;
+let availableItems = [];
+
+const TIMEOUT = 30000;
 
 function cleanOldData() {
     const now = Date.now();
@@ -68,6 +71,10 @@ app.post("/heartbeat", (req, res) => {
         last_seen: now
     }));
 
+    if (data.items && Array.isArray(data.items)) {
+        availableItems = data.items;
+    }
+
     cleanOldData();
 
     res.json({
@@ -105,6 +112,13 @@ app.get("/api/servers", (req, res) => {
     res.json({
         success: true,
         servers: Object.values(activeServers)
+    });
+});
+
+app.get("/api/items", (req, res) => {
+    res.json({
+        success: true,
+        items: availableItems
     });
 });
 
